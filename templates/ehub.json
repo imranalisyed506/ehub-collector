@@ -227,6 +227,22 @@
                         {
                             "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
                             "value": "[if(variables('isApplicationInsightEnabled'),reference(concat('microsoft.insights/components/', variables('applicationInsightsName'))).InstrumentationKey,json('null'))]"
+                        },
+                        {
+                            "name": "APP_LOG_EHUB_NAME",
+                            "value": "[variables('ehubName')]"
+                        },
+                        {
+                            "name": "APP_LOG_EHUB_CONSUMER_GROUP",
+                            "value": "[variables('ehubConsumerGroup')]"
+                        },
+                        {
+                            "name": "APP_DL_CONTAINER_NAME",
+                            "value": "[variables('dlContainerName')]"
+                        },
+                        {
+                            "name": "APP_LOG_EHUB_CONNECTION",
+                            "value": "[if(equals(parameters('Event Hub Connection String'), ''), listKeys(resourceId('Microsoft.EventHub/namespaces/AuthorizationRules', variables('ehubNsName'), 'RootManageSharedAccessKey'), '2024-01-01').primaryConnectionString, parameters('Event Hub Connection String'))]"
                         }
                     ],
                     "connectionStrings": [
@@ -252,7 +268,8 @@
                         }
                     ],
                     "ftpsState": "FtpsOnly",
-                    "minTlsVersion": "[variables('minimumTlsVersion')]"
+                    "minTlsVersion": "[variables('minimumTlsVersion')]",
+                    "use32BitWorkerProcess": false
                 },
                 "clientAffinityEnabled": false,
                 "httpsOnly": true,
@@ -261,8 +278,8 @@
             },
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', variables('webAppStorageAccountName'))]",
-                "[resourceId('microsoft.insights/components/', variables('applicationInsightsName'))]"
-
+                "[resourceId('microsoft.insights/components/', variables('applicationInsightsName'))]",
+                "[resourceId('Microsoft.EventHub/namespaces', variables('ehubNsName'))]"
             ],
             "resources": [
                 {
@@ -284,7 +301,8 @@
                     "name": "[variables('webAppSourceControlName')]",
                     "type": "sourcecontrols",
                     "dependsOn": [
-                        "[resourceId('Microsoft.Web/Sites', parameters('Application Name'))]"
+                        "[resourceId('Microsoft.Web/Sites', parameters('Application Name'))]",
+                        "[resourceId('Microsoft.Web/sites/config', parameters('Application Name'), 'appsettings')]"
                     ],
                     "properties": {
                         "RepoUrl": "[variables('repo')]",
@@ -298,7 +316,6 @@
                     "type": "config",
                     "dependsOn": [
                         "[resourceId('Microsoft.Web/Sites', parameters('Application Name'))]",
-                        "[resourceId('Microsoft.Web/sites/sourcecontrols', parameters('Application Name'), variables('webAppSourceControlName'))]",
                         "[resourceId('Microsoft.EventHub/namespaces', variables('ehubNsName'))]"
                     ],
                     "properties": {
