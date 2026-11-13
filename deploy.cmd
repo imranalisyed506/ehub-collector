@@ -64,16 +64,17 @@ setlocal
 
 echo Deploying the function
 
-:: 1. Install function extensions
-call :InstallFunctionExtensions "%DEPLOYMENT_SOURCE%"
+:: Binding extensions come from extensionBundle in host.json.
+:: Do not build extensions.csproj. That writes bin\extensions.json, which the
+:: Functions host rejects when extensionBundle is set.
 
-:: 2. KuduSync
+:: 1. KuduSync
 IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
-  call :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%" -t "%DEPLOYMENT_TARGET%" -n "%NEXT_MANIFEST_PATH%" -p "%PREVIOUS_MANIFEST_PATH%" -i ".git;.hg;.deployment;deploy.cmd;obj"
+  call :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%" -t "%DEPLOYMENT_TARGET%" -n "%NEXT_MANIFEST_PATH%" -p "%PREVIOUS_MANIFEST_PATH%" -i ".git;.hg;.deployment;deploy.cmd;obj;bin"
   IF !ERRORLEVEL! NEQ 0 goto error
 )
 
-:: 3. Restore npm
+:: 2. Restore npm
 call :RestoreNpmPackages "%DEPLOYMENT_TARGET%"
 
 exit /b %ERRORLEVEL%
@@ -102,19 +103,6 @@ FOR /F "tokens=*" %%i IN ('DIR /B %1 /A:D') DO (
 
 exit /b %ERRORLEVEL%
 
-:InstallFunctionExtensions
-setlocal
-
-echo Installing function extensions from nuget
-
-IF EXIST "%1\extensions.csproj" (
-  pushd "%1"
-  call dotnet build -o bin
-  IF !ERRORLEVEL! NEQ 0 goto error
-  popd
-)
-
-exit /b %ERRORLEVEL%
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 goto end
 
